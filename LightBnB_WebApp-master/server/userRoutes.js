@@ -24,12 +24,19 @@ module.exports = function(router, database) {
    * @param {String} password encrypted
    */
   const login =  function(email, password) {
+    // console.log("check");
     return database.getUserWithEmail(email)
     .then(user => {
+      // console.log("user: ", user);
       if (bcrypt.compareSync(password, user.password)) {
+        console.log("user: ", user);
         return user;
       }
+      // console.log("user: ", user);
       return null;
+    })
+    .catch(err => {
+      console.log("error: ", error);
     });
   }
   exports.login = login;
@@ -42,6 +49,7 @@ module.exports = function(router, database) {
           res.send({error: "error"});
           return;
         }
+        console.log("check2");
         req.session.userId = user.id;
         res.send({user: {name: user.name, email: user.email, id: user.id}});
       })
