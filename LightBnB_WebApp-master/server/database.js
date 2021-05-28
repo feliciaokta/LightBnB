@@ -149,15 +149,64 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 
- const getAllProperties = (options, limit = 10) => {
-  return pool
-    .query(`SELECT $1 FROM properties LIMIT $2;`, [options, limit])
-    .then((result) => {
-      console.log(result.rows);
-    })
-    .catch((err) => {
-      console.log(err.message);
-    });
+//  const getAllProperties = (options, limit = 10) => {
+//   return pool
+//     .query(`SELECT $1 FROM properties LIMIT $2;`,
+//     [options, limit])
+//     .then((result) => {
+//       console.log(result.rows);
+//     })
+//     .catch((err) => {
+//       console.log(err.message);
+//     });
+// };
+
+
+
+const getAllProperties = function (options, limit = 10) {
+  // 1
+  const queryParams = [];
+  // 2
+  let queryString = `
+  SELECT properties.*, avg(property_reviews.rating) as average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id
+  `;
+
+  // 3
+  if (options.city) {
+    queryParams.push(`%${options.city}%`);
+    queryString += `WHERE city LIKE $${queryParams.length} `;
+  }
+
+  if (options.owner_id) {
+    queryParams.push(`%${options.owner_id}%`);
+    queryString += `WHERE properties.owner_id LIKE $${queryParams.length}`;
+  }
+
+  if (options.minimum_price_per_night, options.maximum_price_per_night) {
+    queryParams.push(`%${options.minimum_price_per_night}%, %${options.maximum_price_per_night}%`);
+    queryString += `WHERE properties.cost_per_night > ($${options.minimum_price_per_night} /100) AND properties.cost_per_night < ($${options.maximum_price_per_night} /100)`;
+  }
+
+  if (options.minimum_rating) {
+    queryParams.push(`%${options.minimum_rating}%`);
+    queryString += `WHERE property_reviews.rating >= $${options.minimum_rating}`;
+  }
+
+  // 4
+  queryParams.push(limit);
+  queryString += `
+  GROUP BY properties.id
+  ORDER BY cost_per_night
+  LIMIT $${queryParams.length};
+  `;
+
+  // 5
+  console.log(queryString, queryParams);
+
+  // 6
+  return pool.query(queryString, queryParams).then((res) => res.rows);
 };
 
 
